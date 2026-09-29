@@ -74,7 +74,7 @@
     "identicon.js": "^2.3.3",
     "int-encoder": "^1.1.1",
     "kryptokrona-crypto": "^1.0.3",
-    "kryptokrona-wallet-backend-js": "^2.5.8",
+    "kryptokrona-wallet-backend-js": "^2.6.1",
     "metro-react-native-babel-preset": "^0.77.0",
     "moment": "^2.30.1",
     "patch-package": "^8.0.0",
