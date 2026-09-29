@@ -22,6 +22,7 @@ import {
   EmptyPlaceholder,
   Header,
   InputField,
+  LoadingPlaceholder,
   ModalCenter,
   PreviewItem,
   QrCodeDisplay,
@@ -60,6 +61,7 @@ export const MessagesScreen: React.FC<Props> = () => {
   const user = useUserStore((state) => state.user);
   const navigation = useNavigation<MainStackNavigationType>();
   const contacts = useGlobalStore((state) => state.contacts);
+  const contactsLoaded = useGlobalStore((state) => state.contactsLoaded);
   const [modalVisible, setModalVisible] = useState(false);
   const [joining, setJoining] = useState(false);
   const [link, setLink] = useState<string | null>(null);
@@ -236,7 +238,8 @@ export const MessagesScreen: React.FC<Props> = () => {
         )}
         {!joining && showQR && <QrCodeDisplay code={user.huginAddress} />}
       </ModalCenter>
-      {contacts.length === 0 && (
+      {!contactsLoaded && contacts.length === 0 && <LoadingPlaceholder />}
+      {contactsLoaded && contacts.length === 0 && (
         <EmptyPlaceholder text={t('emptyAddressBook')} />
       )}
       <FlatList

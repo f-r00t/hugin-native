@@ -12,8 +12,11 @@ type GlobalStore = {
   authFinishFunction: (() => void | Promise<void>) | null;
   authTarget: any;
   started: boolean;
+  dbReady: boolean;
   rooms: Room[];
+  roomsLoaded: boolean;
   contacts: Contact[];
+  contactsLoaded: boolean;
   thisRoom: string;
   deviceToken: string;
   thisContact: string;
@@ -36,6 +39,7 @@ type GlobalStore = {
   resetPendingLink: () => void;
   setAppState: (payload: AppStateStatus) => void;
   setStarted: (payload: boolean) => void;
+  setDbReady: (payload: boolean) => void;
   setVoipPayload: (payload: Record<string, any>) => void;
   clearVoipPayload: () => void;
   setDeviceToken: (payload: string) => void;
@@ -117,10 +121,13 @@ export const useGlobalStore = create<
     roomMessages: [],
     roomUsers: {},
     rooms: [],
+    roomsLoaded: false,
+    contactsLoaded: false,
     feedMessages: [],
     avatars: {},
     huginNode: {connected: false},
     started: false,
+    dbReady: false,
     loadingStatus: 'Starting...',
     pendingLink: null,
     remoteRoomFiles: [],
@@ -235,6 +242,9 @@ export const useGlobalStore = create<
     },
     setStarted: (started: boolean) => {
       set({ started });
+    },
+    setDbReady: (dbReady: boolean) => {
+      set({ dbReady });
     },
     setBalance: async (balance: Balance) => {
       set({ balance });
@@ -474,6 +484,8 @@ export const resetGlobalStore = () => {
     roomMessages: [],
     roomUsers: {},
     rooms: [],
+    roomsLoaded: false,
+    contactsLoaded: false,
     feedMessages: [],
     avatars: {},
     syncStatus: [],

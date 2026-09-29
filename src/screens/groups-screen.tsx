@@ -24,6 +24,7 @@ import {
   EmptyPlaceholder,
   Header,
   InputField,
+  LoadingPlaceholder,
   ModalCenter,
   PreviewItem,
   QrScanner,
@@ -57,6 +58,7 @@ export const GroupsScreen: React.FC<Props> = ({ route }) => {
   const user = useUserStore((state) => state.user);
   const navigation = useNavigation<MainStackNavigationType>();
   const rooms = useGlobalStore((state) => state.rooms);
+  const roomsLoaded = useGlobalStore((state) => state.roomsLoaded);
   const [modalVisible, setModalVisible] = useState(false);
   const [qrScanner, setQrScanner] = useState(false);
   const [joining, setJoining] = useState(false);
@@ -274,7 +276,10 @@ export const GroupsScreen: React.FC<Props> = ({ route }) => {
           </View>
         )}
       </ModalCenter>
-      {rooms.length === 0 && <EmptyPlaceholder text={t('noRooms')} />}
+      {!roomsLoaded && rooms.length === 0 && <LoadingPlaceholder />}
+      {roomsLoaded && rooms.length === 0 && (
+        <EmptyPlaceholder text={t('noRooms')} />
+      )}
       <FlatList
         data={rooms}
         keyExtractor={(item, i) => `${item.roomKey}-${i}`}
@@ -286,7 +291,7 @@ export const GroupsScreen: React.FC<Props> = ({ route }) => {
           />
         )}
       />
-      {filteredSuggestedRooms.length > 0 && rooms.length < 3 && (
+      {roomsLoaded && filteredSuggestedRooms.length > 0 && rooms.length < 3 && (
         <View style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
           <TextField size="small">
             {t('suggestedRooms', 'Suggested Rooms')}

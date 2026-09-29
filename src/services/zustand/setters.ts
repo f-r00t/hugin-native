@@ -6,11 +6,11 @@ import { usePreferencesStore, useUserStore } from './async-storage-stores';
 import { useGlobalStore } from './global-store';
 
 export const setStoreRooms = (rooms: Room[]) => {
-  useGlobalStore.setState({ rooms });
+  useGlobalStore.setState({ rooms, roomsLoaded: true });
 };
 
 export const setStoreContacts = (contacts: Contact[]) => {
-  useGlobalStore.setState({ contacts });
+  useGlobalStore.setState({ contacts, contactsLoaded: true });
 };
 
 export const setSyncStatus = (syncStatus: number[]) => {
