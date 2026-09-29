@@ -2,22 +2,16 @@ import { useMemo, useState } from 'react';
 
 import { Dimensions, StyleSheet, View } from 'react-native';
 
-import { useTranslation } from 'react-i18next';
-
 import { nameMaxLength } from '@/config';
 import type { User } from '@/types';
 import { getAvatar } from '@/utils';
 
 import { Avatar, TextField, TouchableOpacity } from './_elements';
-import { ModalCenter } from './_layout';
+import { UserDetails } from './user-details';
 
-type Props = User;
-
-// export const UserItem: React.FC<Props> = ({ name, address, online = true, avatar = undefined }) => {
   export const UserItem: React.FC<User> = (props) => {
 
   let { address, name, avatar, online } = props;
-  const { t } = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
   const w = Dimensions.get('window').width;
   const width = w / 2;
@@ -31,22 +25,16 @@ type Props = User;
     setModalVisible(false);
   }
 
-  function onPressDm() {
-    onClose();
-    // navigation.navigate(MainScreens.MessageScreen, { roomKey, name });
-  }
-
   return (
     <TouchableOpacity style={[styles.onlineUser, { width, opacity: online === false ? 0.3 : 1 }]} onPress={onPress}>
-      <ModalCenter visible={modalVisible} closeModal={onClose}>
-        <View style={styles.modalInner}>
-          <Avatar size={200} base64={avatar} />
-          <TextField style={{ marginVertical: 12 }}>{name}</TextField>
-          {/* <TextButton type="secondary" onPress={onPressDm}>
-            {t('messageUser')}
-          </TextButton> */}
-        </View>
-      </ModalCenter>
+      <UserDetails
+        visible={modalVisible}
+        address={address ?? ''}
+        name={name}
+        avatar={avatar}
+        online={online}
+        onClose={onClose}
+      />
       <Avatar size={28} base64={avatar} />
       <TextField size="xsmall" maxLength={nameMaxLength} style={styles.name}>
         {name}
@@ -59,16 +47,11 @@ type Props = User;
 };
 
 const styles = StyleSheet.create({
-  modalInner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 12,
-  },
   name: { marginLeft: 6 },
   onlineUser: {
     flexDirection: 'row',
     margin: 1,
     marginBottom: 4,
-    alignItems: 'center', 
+    alignItems: 'center',
   },
 });

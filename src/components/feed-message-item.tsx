@@ -40,6 +40,7 @@ import { useNavigation } from '@react-navigation/native';
 import { MainScreens } from '@/config';
 import { extractHuginLinkAndClean, lightenHexColor } from '@/services/utils/tools';
 import { GroupInvite } from './group-invite';
+import { UserDetails } from './user-details';
 
 interface Props extends Partial<Message> {
   userAddress: string;
@@ -81,7 +82,14 @@ export const FeedMessageItem: React.FC<Props> = ({
   const ref = useRef<IWaveformRef>(null);
   const [playerState, setPlayerState] = useState(PlayerState.stopped);
   const [isLoading, setIsLoading] = useState(true);
+  const [userDetailsVisible, setUserDetailsVisible] = useState(false);
   const navigation = useNavigation<MainStackNavigationType>();
+
+  function onUserPress() {
+    if (userAddress.length > 15) {
+      setUserDetailsVisible(true);
+    }
+  }
 
   const borderColor = theme.border;
   const card = theme.card;
@@ -303,6 +311,12 @@ export const FeedMessageItem: React.FC<Props> = ({
           </View>
         )}
       </ModalBottom>
+      <UserDetails
+        visible={userDetailsVisible}
+        address={userAddress}
+        name={nickname}
+        onClose={() => setUserDetailsVisible(false)}
+      />
       {/* REPLY STUFF */}
       <View style={styles.content}>
         {replyto?.[0]?.nickname && (
@@ -335,14 +349,16 @@ export const FeedMessageItem: React.FC<Props> = ({
         <View style={styles.messageContainer}>
           <View style={[styles.avatar]}>
             {userAddress.length > 15 && (
-              <Avatar address={userAddress} size={36} />
+              <Avatar address={userAddress} size={36} onPress={onUserPress} />
             )}
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.info}>
-              <TextField bold size="xsmall" style={{ color }}>
-                {name}
-              </TextField>
+              <TouchableOpacity onPress={onUserPress}>
+                <TextField bold size="xsmall" style={{ color }}>
+                  {name}
+                </TextField>
+              </TouchableOpacity>
               <TextField type="muted" size="xsmall" style={styles.date}>
                 {dateString}
               </TextField>

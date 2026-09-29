@@ -42,6 +42,7 @@ import {
   UserItem,
   TouchableOpacity,
   EmptyPlaceholder,
+  LoadingPlaceholder,
   Avatar,
 } from '@/components';
 
@@ -99,22 +100,26 @@ export const FeedScreen: React.FC<Props> = ({ route }) => {
 const [page, setPage] = useState(0);
 const [loading, setLoading] = useState(false);
 const [noMoreMessages, setNoMoreMessages] = useState(false);
+const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
 const loadMessages = async () => {
   console.log('Loading messages for page ', page);
   if (loading || noMoreMessages) return;
   setLoading(true);
 
-  const newMessages = await getFeedMessages(page);
-  console.log(`Loaded ${newMessages.length} messages for page ${page}: `, newMessages);
-  if (newMessages.length === 0) {
-    setNoMoreMessages(true);
-  } else {
-    setMessages((old) => [...old, ...newMessages]);
-    setPage((prev) => prev + 1);
+  try {
+    const newMessages = await getFeedMessages(page);
+    console.log(`Loaded ${newMessages.length} messages for page ${page}: `, newMessages);
+    if (newMessages.length === 0) {
+      setNoMoreMessages(true);
+    } else {
+      setMessages((old) => [...old, ...newMessages]);
+      setPage((prev) => prev + 1);
+    }
+  } finally {
+    setLoading(false);
+    setHasLoadedOnce(true);
   }
-
-  setLoading(false);
 };
 
 
@@ -346,7 +351,9 @@ const loadMessages = async () => {
         </TouchableOpacity>
         }
 
-        {messages?.length == 0 &&
+        {!hasLoadedOnce && messages?.length == 0 && <LoadingPlaceholder />}
+
+        {hasLoadedOnce && messages?.length == 0 &&
           <EmptyPlaceholder text={t('noFeed')} />
         }
 
