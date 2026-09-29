@@ -55,7 +55,7 @@ import { getAvatar } from '@/utils';
 
 import { Header } from '../components/_navigation/header';
 import { Peers } from '../lib/connections';
-import { setLatestMessages, updateMessage } from '../services/bare/contacts';
+import { setLatestMessages, setMessages as loadContactMessages, updateMessage } from '../services/bare/contacts';
 import { randomKey } from '../services/bare/crypto';
 import { deleteMessage, saveMessage, getMessages } from '../services/bare/sqlite';
 import { Wallet } from '../services/kryptokrona/wallet';
@@ -86,6 +86,13 @@ export const MessageScreen: React.FC<Props> = ({ route }) => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
   const [noMoreMessages, setNoMoreMessages] = useState<boolean>(false);
+  // Start unloaded unless this contact's messages are already in the store
+  // (the list preloads them before navigating), so we avoid a spinner flash.
+  const [isLoadingRoom, setIsLoadingRoom] = useState<boolean>(() => {
+    const s = useGlobalStore.getState();
+    return !(s.thisContact === roomKey && (s.messages?.length ?? 0) > 0);
+  });
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
 
   const reversedMessages = useMemo(() => {
     return [...messages].reverse();
@@ -298,8 +305,40 @@ useEffect(() => {
 
   useFocusEffect(
     React.useCallback(() => {
+      let cancelled = false;
+
+      const currentState = useGlobalStore.getState();
+      const needsReload =
+        currentState.thisContact !== roomKey || !currentState.messages?.length;
+
       setStoreCurrentContact(roomKey);
-      return () => {};
+
+      if (needsReload) {
+        setIsLoadingRoom(true);
+        loadContactMessages(roomKey, 0)
+          .catch((e) => console.log('[message-screen] Error loading messages:', e))
+          .finally(() => {
+            if (!cancelled) {
+              setIsLoadingRoom(false);
+              setHasLoadedOnce(true);
+            }
+          });
+      } else {
+        setIsLoadingRoom(false);
+        setHasLoadedOnce(true);
+      }
+
+      const timeout = setTimeout(() => {
+        if (!cancelled) {
+          setIsLoadingRoom(false);
+          setHasLoadedOnce(true);
+        }
+      }, 5000);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timeout);
+      };
     }, [roomKey]),
   );
 
@@ -645,6 +684,17 @@ useEffect(() => {
           </View>
         </TouchableOpacity>
       )}
+      {isLoadingRoom ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={color} />
+        </View>
+      ) : hasLoadedOnce && reversedMessages.length === 0 ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <TextField size="xsmall" type="muted">{'No messages yet'}</TextField>
+        </View>
+      ) : null}
+
+      {!isLoadingRoom && reversedMessages.length > 0 && (
       <FlatList
         style={{ flex: 1 }}
         inverted
@@ -708,9 +758,11 @@ useEffect(() => {
           );
         }}
         contentContainerStyle={[styles.flatListContent, { paddingTop: 0 }]}
-        initialNumToRender={messages.length}
-        maxToRenderPerBatch={messages.length}
+        initialNumToRender={15}
+        maxToRenderPerBatch={10}
+        windowSize={11}
       />
+      )}
 
       <KeyboardAvoidingView
         style={[styles.inputWrapper, { backgroundColor }]}

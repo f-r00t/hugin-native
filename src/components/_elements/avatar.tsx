@@ -1,5 +1,5 @@
 import { Image, StyleSheet, View } from 'react-native';
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { TouchableOpacity } from '../_elements';
 
 import { Styles } from '@/styles';
@@ -13,7 +13,7 @@ interface Props {
   onPress?: () => void;
 }
 
-export const Avatar: React.FC<Props> = ({
+const AvatarInner: React.FC<Props> = ({
   base64,
   address,
   size = 70,
@@ -58,6 +58,8 @@ export const Avatar: React.FC<Props> = ({
     </TouchableOpacity>
   );
 };
+
+export const Avatar = React.memo(AvatarInner);
 
 
 const styles = StyleSheet.create({

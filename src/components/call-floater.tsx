@@ -22,7 +22,7 @@ import { Avatar, TextField, TouchableOpacity } from '@/components';
 import { useGlobalStore, WebRTC, useThemeStore } from '@/services';
 import { textType } from '@/styles';
 import { AudioDevice, WiredHeadsetEventData } from '@/types';
-import type { MainStackNavigationType } from '@/types';
+import type { MainStackNavigationType, User } from '@/types';
 
 import { CustomIcon } from './_elements/custom-icon';
 
@@ -30,6 +30,62 @@ import { getAvatar, getColorFromHash, prettyPrintDate } from '@/utils';
 
 import InCallManager from 'react-native-incall-manager';
 import { useNavigation } from '@react-navigation/native';
+
+type CallAvatarProps = {
+  user: User;
+  isTalking: boolean;
+  myUserAddress: string;
+};
+
+// Hoisted to module scope so React.memo has a stable component identity.
+// Defining it inside CallFloater re-created it on every render (e.g. every
+// talkingUsers update), which remounted every avatar and defeated the memo.
+const CallAvatar = React.memo(
+  ({ user, isTalking, myUserAddress }: CallAvatarProps) => {
+    const isMe = user.address === myUserAddress;
+    const connected = user.connectionStatus === 'connected';
+
+    return (
+      <View
+        style={{
+          opacity: isMe || connected ? 1 : 0.5,
+          borderRadius: 5,
+          borderWidth: 2,
+          borderColor: isTalking ? 'green' : 'transparent',
+        }}
+      >
+        <Avatar address={user.address} size={24} />
+
+        {/* Connecting / unknown */}
+        {(user.connectionStatus === 'connecting' ||
+          (user.connectionStatus === undefined && !isMe)) && (
+          <View style={{ position: 'absolute', right: 2, top: 2 }}>
+            <ActivityIndicator size="small" />
+          </View>
+        )}
+
+        {/* Disconnected */}
+        {user.connectionStatus === 'disconnected' && (
+          <View style={{ position: 'absolute', left: 4, top: -1 }}>
+            <TextField size="xsmall">❌</TextField>
+          </View>
+        )}
+
+        {/* Muted */}
+        {user.muted && (
+          <View style={{ position: 'absolute', left: 4, bottom: -1 }}>
+            <TextField size="xsmall">🔇</TextField>
+          </View>
+        )}
+      </View>
+    );
+  },
+  (prev, next) =>
+    prev.isTalking === next.isTalking &&
+    prev.myUserAddress === next.myUserAddress &&
+    prev.user.connectionStatus === next.user.connectionStatus &&
+    prev.user.muted === next.user.muted,
+);
 
 export const CallFloater: React.FC = () => {
 
@@ -79,53 +135,6 @@ export const CallFloater: React.FC = () => {
   useEffect(() => {
     popUp();
   }, [callKit])
-
-  const CallAvatar = React.memo(
-  ({ user, isTalking }: { user: User; isTalking: boolean }) => {
-    const isMe = user.address === myUserAddress;
-    const connected = user.connectionStatus === 'connected';
-
-    return (
-      <View
-        style={{
-          opacity: isMe || connected ? 1 : 0.5,
-          borderRadius: 5,
-          borderWidth: 2,
-          borderColor: isTalking ? 'green' : 'transparent',
-        }}
-      >
-        <Avatar address={user.address} size={24} />
-
-        {/* Connecting / unknown */}
-        {(user.connectionStatus === 'connecting' ||
-          (user.connectionStatus === undefined && !isMe)) && (
-          <View style={{ position: 'absolute', right: 2, top: 2 }}>
-            <ActivityIndicator size="small" />
-          </View>
-        )}
-
-        {/* Disconnected */}
-        {user.connectionStatus === 'disconnected' && (
-          <View style={{ position: 'absolute', left: 4, top: -1 }}>
-            <TextField size="xsmall">❌</TextField>
-          </View>
-        )}
-
-        {/* Muted */}
-        {user.muted && (
-          <View style={{ position: 'absolute', left: 4, bottom: -1 }}>
-            <TextField size="xsmall">🔇</TextField>
-          </View>
-        )}
-      </View>
-    );
-  },
-  (prev, next) =>
-    prev.isTalking === next.isTalking &&
-    prev.user.connectionStatus === next.user.connectionStatus &&
-    prev.user.muted === next.user.muted
-);
-
 
   // useEffect(() => {
   //   console.log('Update time')
@@ -275,7 +284,8 @@ const panGesture = Gesture.Pan()
           <CallAvatar
             key={user.address}
             user={user}
-            isTalking={talkingUsers[user.address]}
+            isTalking={!!talkingUsers[user.address]}
+            myUserAddress={myUserAddress}
           />
         ))}
         </View>

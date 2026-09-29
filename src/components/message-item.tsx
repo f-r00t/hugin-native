@@ -41,6 +41,7 @@ import {
 } from './_elements';
 import { ModalBottom } from './_layout';
 import { EmojiPicker } from './emoji-picker';
+import { UserDetails } from './user-details';
 import { GroupInvite, VideoPlayer } from '.';
 import { extractHuginLinkAndClean } from '../services/utils';
 import { markMessageAsRead } from '../services/bare/sqlite';
@@ -94,15 +95,18 @@ const MessageItemInner: React.FC<Props> = ({
   const theme = useThemeStore((state) => state.theme);
   const [actionsModal, setActionsModal] = useState(false);
   const [actions, setActions] = useState(true);
+  const [userDetailsVisible, setUserDetailsVisible] = useState(false);
   const ref = useRef<IWaveformRef>(null);
   const [playerState, setPlayerState] = useState(PlayerState.stopped);
   const [waveformError, setWaveformError] = useState(false);
   const lastPress = useRef<number>(0);
   const DOUBLE_PRESS_DELAY = 300;
 
-  if (!read) {
-    markMessageAsRead(replyHash, 'roomsmessages');
-  }
+  useEffect(() => {
+    if (!read) {
+      markMessageAsRead(replyHash, 'roomsmessages');
+    }
+  }, [read, replyHash]);
 
   const handlePress = () => {
     const now = Date.now();
@@ -465,8 +469,18 @@ const MessageItemInner: React.FC<Props> = ({
 
         {/* HEADER ROW */}
         {!onlyMessage && (
-          <View style={styles.headerRow}>
-            <Avatar base64={getAvatar(userAddress)} size={18} />
+          <TouchableOpacity
+            style={styles.headerRow}
+            onPress={() =>
+              userAddress.length > 15 && setUserDetailsVisible(true)
+            }>
+            <Avatar
+              base64={getAvatar(userAddress)}
+              size={18}
+              onPress={() =>
+                userAddress.length > 15 && setUserDetailsVisible(true)
+              }
+            />
             <View style={styles.headerText}>
               <TextField bold size="xsmall" style={{ color }}>
                 {name}
@@ -475,8 +489,15 @@ const MessageItemInner: React.FC<Props> = ({
                 {dateString}
               </TextField>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
+
+        <UserDetails
+          visible={userDetailsVisible}
+          address={userAddress}
+          name={nickname}
+          onClose={() => setUserDetailsVisible(false)}
+        />
 
         {/* MESSAGE ROW (FULL WIDTH) */}
          <View style={styles.bodyRow}>

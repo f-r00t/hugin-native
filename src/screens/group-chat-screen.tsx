@@ -710,9 +710,9 @@ export const GroupChatScreen: React.FC<Props> = ({ route }) => {
             );
           }}
           contentContainerStyle={[styles.flatListContent, { paddingTop: 0 }]}
-          initialNumToRender={55}
-          maxToRenderPerBatch={55}
-          windowSize={21}
+          initialNumToRender={15}
+          maxToRenderPerBatch={10}
+          windowSize={11}
           onEndReached={loadMoreMessages}
           onEndReachedThreshold={0.1}
           ListHeaderComponentStyle={{height: 20}}

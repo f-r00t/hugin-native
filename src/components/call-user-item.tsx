@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 
 import { ActivityIndicator, Dimensions, StyleSheet, View } from 'react-native';
 
@@ -26,12 +26,10 @@ type Props = User & {
   isTalking?: boolean;
 };
 
-export const CallUserItem: React.FC<Props> = (props) => {
+const CallUserItemInner: React.FC<Props> = (props) => {
 
 
   const { address, name, avatar, video, isTalking, online } = props;
-
-  console.log('[call-user-item.tsx] props:', video, address, avatar)
 
 
   const { t } = useTranslation();
@@ -182,6 +180,8 @@ export const CallUserItem: React.FC<Props> = (props) => {
     </TouchableOpacity>
   );
 };
+
+export const CallUserItem = React.memo(CallUserItemInner);
 
 const styles = StyleSheet.create({
   video: {

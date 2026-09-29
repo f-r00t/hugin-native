@@ -62,7 +62,7 @@ export const RootNavigator = () => {
   const hydrated = useAppStoreState((state) => state._hasHydrated);
   const authenticated = useGlobalStore((state) => state.authenticated);
   const started = useGlobalStore((state) => state.started);
-  const currentCallRoom = useGlobalStore((state) => state.currentCall).room;
+  const currentCallRoom = useGlobalStore((state) => state.currentCall.room);
   const user = useUserStore((state) => state.user);
   const authMethod = usePreferencesStore(
     (state) => state.preferences?.authMethod,

@@ -40,7 +40,6 @@ export const PreviewItem: React.FC<Props> = ({
   const borderColor = isNew ? theme.foreground : theme.border;
   const color = theme.background;
   const foreground = theme.foreground;
-  const allRoomUsers = useGlobalStore((state) => state.roomUsers);
   const [online, setOnline] = useState(false);
   const [callOnline, setCallOnline] = useState(false);
   const unreadCount = roomKey ? 
@@ -50,6 +49,11 @@ export const PreviewItem: React.FC<Props> = ({
   const dateString = prettyPrintDate(timestamp ?? 0);
 
   const [derivedKey, setDerivedKey] = useState<string | null>(null);
+
+  // Subscribe only to this row's user list. Subscribing to the whole
+  // roomUsers map re-rendered every preview row on any room's presence change.
+  const lookupKey = roomKey ?? derivedKey ?? '';
+  const roomUsersForKey = useGlobalStore((state) => state.roomUsers[lookupKey]);
 
   useEffect(() => {
     if (roomKey) return;
@@ -62,15 +66,14 @@ export const PreviewItem: React.FC<Props> = ({
 
   useEffect(() => {
     if (roomKey) {
-      setOnline(allRoomUsers[mRoomKey]?.length > 1);
-      setCallOnline(allRoomUsers[mRoomKey]?.some(a => a.voice === true));
+      setOnline(roomUsersForKey?.length > 1);
+      setCallOnline(roomUsersForKey?.some(a => a.voice === true));
       return;
     }
     if (!derivedKey) return;
-    const currentRoomUsers = allRoomUsers[derivedKey];
-    setOnline(currentRoomUsers?.some((a) => a.address === address) ?? false);
-    setCallOnline(currentRoomUsers?.some(a => a.voice === true) ?? false);
-  }, [allRoomUsers, derivedKey]);
+    setOnline(roomUsersForKey?.some((a) => a.address === address) ?? false);
+    setCallOnline(roomUsersForKey?.some(a => a.voice === true) ?? false);
+  }, [roomUsersForKey, derivedKey]);
 
 
   function handlePress() {
