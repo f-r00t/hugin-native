@@ -24,6 +24,12 @@ export async function init() {
 
     console.log('☎️ Inited db')
 
+    // Signal that local SQLite is ready. Rooms/contacts are plain DB reads and
+    // must not wait for the (much later) `started` flag, which only flips after
+    // the wallet's initial sync -- a slow sync otherwise leaves those lists
+    // spinning forever.
+    useGlobalStore.getState().setDbReady(true);
+
     await usePreferencesStore.persist.rehydrate();
     const preferences = usePreferencesStore.getState().preferences;
 

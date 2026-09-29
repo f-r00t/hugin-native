@@ -103,13 +103,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   async function initFrontend() {
     try {
-    await waitForCondition(() => useGlobalStore.getState().started, 10000);
-    console.log('Initing front end..', frontendStartedRef.current)
     if (frontendStartedRef.current) return;
+
+    // Load local DB data (rooms + contacts) as soon as SQLite is ready. These
+    // are plain DB reads and must NOT wait on `started`, which only flips after
+    // the wallet's (possibly very slow) initial sync. Gating them on `started`
+    // meant a slow sync timed out the wait and the lists spun forever.
+    try {
+      await waitForCondition(() => useGlobalStore.getState().dbReady, 20000);
+    } catch (e) {
+      console.log('[appProvider.tsx] dbReady wait timed out, loading anyway:', e);
+    }
     console.log('Setting latest room messages..')
     await setLatestRoomMessages(false);
     console.log('Setting latest messages..')
     await setLatestMessages();
+
+    // The remaining setup depends on the wallet/network being up. A timeout
+    // here is non-fatal -- the lists above are already populated.
+    try {
+      await waitForCondition(() => useGlobalStore.getState().started, 30000);
+    } catch (e) {
+      console.log('[appProvider.tsx] "started" not signalled in time, continuing:', e);
+    }
+    console.log('Initing front end..', frontendStartedRef.current)
     console.log('Starting fiat price loop..')
     // Function to update the fiat price every minute
     async function updateFiatPrice() {
