@@ -1,0 +1,100 @@
+name: Android smoke test
+
+# Builds a release-signed APK (signed with the committed debug keystore, so no
+# secrets are needed) and launches it in an emulator to verify the app starts
+# without crashing. Runs on pull requests.
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  android-smoke:
+    name: Build APK and launch in emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Force Android linker flags
+        run: |
+          echo "export LDFLAGS=\"-Wl,-z,max-page-size=16384\"" >> $GITHUB_ENV
+          echo "export CFLAGS=\"\"" >> $GITHUB_ENV
+          echo "export CXXFLAGS=\"\"" >> $GITHUB_ENV
+          echo "export GYP_DEFINES=\"android_max_page_size=16384\"" >> $GITHUB_ENV
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: 📦 Install dependencies
+        run: |
+          export LDFLAGS="-Wl,-z,max-page-size=16384"
+          npm install
+
+      - name: 🩹 Patch NPM packages
+        run: npm run patch
+
+      - name: 📋 Get offline lists
+        run: npm run get-offline-lists
+
+      - name: 🔑 Export private keys file
+        run: npm run create-private-keys
+
+      - name: 📦 Bundle bare
+        run: ./bin/bundle.js -ra
+
+      - name: 🔧 Write placeholder google-services.json (no secrets in fork CI)
+        run: echo "ewogICJwcm9qZWN0X2luZm8iOiB7CiAgICAicHJvamVjdF9udW1iZXIiOiAiMDAwMDAwMDAwMDAwIiwKICAgICJwcm9qZWN0X2lkIjogImh1Z2luLWNpLXNtb2tlIiwKICAgICJzdG9yYWdlX2J1Y2tldCI6ICJodWdpbi1jaS1zbW9rZS5hcHBzcG90LmNvbSIKICB9LAogICJjbGllbnQiOiBbCiAgICB7CiAgICAgICJjbGllbnRfaW5mbyI6IHsKICAgICAgICAibW9iaWxlc2RrX2FwcF9pZCI6ICIxOjAwMDAwMDAwMDAwMDphbmRyb2lkOjAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiLAogICAgICAgICJhbmRyb2lkX2NsaWVudF9pbmZvIjogeyAicGFja2FnZV9uYW1lIjogImNvbS5odWdpbiIgfQogICAgICB9LAogICAgICAib2F1dGhfY2xpZW50IjogW10sCiAgICAgICJhcGlfa2V5IjogWyB7ICJjdXJyZW50X2tleSI6ICJBSXphU3lBMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAiIH0gXSwKICAgICAgInNlcnZpY2VzIjogeyAiYXBwaW52aXRlX3NlcnZpY2UiOiB7ICJvdGhlcl9wbGF0Zm9ybV9vYXV0aF9jbGllbnQiOiBbXSB9IH0KICAgIH0KICBdLAogICJjb25maWd1cmF0aW9uX3ZlcnNpb24iOiAiMSIKfQo=" | base64 --decode > android/app/google-services.json
+
+      - name: 🛠️ Build release APK (signed with the committed debug keystore)
+        run: |
+          export LDFLAGS="-Wl,-z,max-page-size=16384"
+          export CFLAGS=""
+          export CXXFLAGS=""
+          cd android
+          ./gradlew assembleRelease --no-daemon
+
+      - name: ⚙️ Enable KVM for hardware acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: 📱 Launch app in emulator and check it starts
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -e
+            APK=android/app/build/outputs/apk/release/app-release.apk
+            echo "Installing $APK"
+            adb install -r "$APK"
+            adb logcat -c
+            echo "Launching com.hugin"
+            adb shell monkey -p com.hugin -c android.intent.category.LAUNCHER 1
+            sleep 25
+            echo "---- recent logcat ----"
+            adb logcat -d | grep -iE "hugin|AndroidRuntime|FATAL" | tail -60 || true
+            if adb logcat -d | grep -qE "FATAL EXCEPTION"; then
+              echo "::error::App crashed on launch (FATAL EXCEPTION found in logcat)"
+              exit 1
+            fi
+            PID=$(adb shell pidof com.hugin | tr -d '\r')
+            if [ -z "$PID" ]; then
+              echo "::error::App process com.hugin is not running after launch"
+              exit 1
+            fi
+            echo "✅ Hugin launched and is still running (pid $PID)"
