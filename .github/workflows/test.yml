@@ -1,0 +1,64 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Jest unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🧪 Run unit tests
+        run: npm test -- --ci
+
+  lint:
+    name: ESLint (files changed in this PR)
+    runs-on: ubuntu-latest
+    # Lint only the files a PR touches: the existing code has thousands of
+    # pre-existing warnings, so a full-repo gate is impractical. This keeps new
+    # and changed code clean without blocking on legacy debt.
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🔎 Lint changed TypeScript files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          FILES=$(git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" -- '*.ts' '*.tsx')
+          if [ -z "$FILES" ]; then
+            echo "No changed TypeScript files to lint."
+            exit 0
+          fi
+          echo "Linting changed files:"
+          echo "$FILES" | sed 's/^/  /'
+          npx eslint $FILES
