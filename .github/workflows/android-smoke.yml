@@ -77,24 +77,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: |
-            set -e
-            APK=android/app/build/outputs/apk/release/app-release.apk
-            echo "Installing $APK"
-            adb install -r "$APK"
-            adb logcat -c
-            echo "Launching com.hugin"
-            adb shell monkey -p com.hugin -c android.intent.category.LAUNCHER 1
-            sleep 25
-            echo "---- recent logcat ----"
-            adb logcat -d | grep -iE "hugin|AndroidRuntime|FATAL" | tail -60 || true
-            if adb logcat -d | grep -qE "FATAL EXCEPTION"; then
-              echo "::error::App crashed on launch (FATAL EXCEPTION found in logcat)"
-              exit 1
-            fi
-            PID=$(adb shell pidof com.hugin | tr -d '\r')
-            if [ -z "$PID" ]; then
-              echo "::error::App process com.hugin is not running after launch"
-              exit 1
-            fi
-            echo "✅ Hugin launched and is still running (pid $PID)"
+          # The emulator-runner executes each line of `script` in its own shell,
+          # so shell variables do not persist between lines. Run the smoke logic
+          # from a single committed script to keep it in one bash process.
+          script: bash .github/scripts/android-smoke.sh
